@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wander</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dce9dd; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #name-entry {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #7fa8b8, #dce9dd); z-index: 10;
+  }
+  #name-entry .card {
+    background: rgba(255, 255, 255, 0.85); padding: 2rem 2.5rem; border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); text-align: center;
+  }
+  #name-entry h1 { margin: 0 0 0.25rem; color: #445; font-weight: 600; }
+  #name-entry p { margin: 0 0 1.25rem; color: #667; }
+  #name-input {
+    font-size: 1.1rem; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid #b9c7c4;
+    outline: none; width: 220px; text-align: center;
+  }
+  #name-entry button {
+    margin-left: 0.5rem; font-size: 1.1rem; padding: 0.6rem 1.2rem; border-radius: 8px; border: none;
+    background: #3f7f7a; color: white; cursor: pointer;
+  }
+  #name-entry button:hover { background: #356865; }
+
+  #hud {
+    position: fixed; top: 1rem; left: 1rem; z-index: 5; color: white;
+    font-size: 1rem; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); pointer-events: none;
+  }
+  #hud-day { font-weight: 600; }
+  #hud-biome { opacity: 0.85; }
+  #hud-status { opacity: 0.85; }
+
+  #score-panel {
+    position: fixed; top: 1rem; right: 1rem; z-index: 5; color: #dfe; background: rgba(0, 0, 0, 0.55);
+    font: 12px/1.4 monospace; padding: 0.6rem 0.8rem; border-radius: 8px; max-width: 260px;
+    max-height: 60vh; overflow-y: auto; display: none;
+  }
+
+  #hints {
+    position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 5;
+    color: white; font-size: 0.9rem; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.25); padding: 0.5rem 1rem; border-radius: 8px;
+    pointer-events: none; text-align: center; transition: opacity 1.5s ease;
+  }
+  #hints.hidden { opacity: 0; }
+
+  #compass {
+    position: fixed; top: 1rem; right: 1rem; z-index: 5; width: 52px; height: 52px;
+    border-radius: 50%; background: rgba(0, 0, 0, 0.3); pointer-events: none;
+    overflow: hidden;
+  }
+  #compass-rose {
+    position: absolute; inset: 0; transition: transform 0.1s linear;
+  }
+  #compass-rose span {
+    position: absolute; color: white; font-size: 0.7rem; font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); left: 50%; top: 50%;
+  }
+  #compass-rose .n { transform: translate(-50%, -50%) translateY(-19px); color: #ffb0a0; }
+  #compass-rose .e { transform: translate(-50%, -50%) translateX(19px); }
+  #compass-rose .s { transform: translate(-50%, -50%) translateY(19px); }
+  #compass-rose .w { transform: translate(-50%, -50%) translateX(-19px); }
+  #compass-pointer {
+    position: absolute; left: 50%; top: 2px; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-bottom: 7px solid rgba(255, 255, 255, 0.9);
+  }
+
+  #score-panel {
+    position: fixed; top: 1rem; right: 4.5rem; z-index: 5; color: #dfe; background: rgba(0, 0, 0, 0.55);
+    font: 12px/1.4 monospace; padding: 0.6rem 0.8rem; border-radius: 8px; max-width: 260px;
+    max-height: 60vh; overflow-y: auto; display: none;
+  }
+
+  #minimap {
+    position: fixed; top: 4.5rem; right: 1rem; z-index: 5; border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35); pointer-events: none; display: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Touch controls: hidden unless the page detects a touch-capable device
+     (see the inline script below), so desktop stays keyboard-only and
+     uncluttered. */
+  #touch-controls { display: none; }
+  body.touch-enabled #touch-controls { display: block; }
+
+  #touch-controls .tbtn {
+    position: fixed; z-index: 6; display: flex; align-items: center; justify-content: center;
+    width: 58px; height: 58px; border-radius: 50%; border: none;
+    background: rgba(255, 255, 255, 0.25); color: white; font: 700 1.1rem system-ui, sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #touch-controls .tbtn:active { background: rgba(255, 255, 255, 0.45); }
+  #touch-controls .tbtn.small { width: 42px; height: 42px; font-size: 0.85rem; }
+
+  #touch-controls .up { left: 78px; bottom: 148px; }
+  #touch-controls .left { left: 16px; bottom: 86px; }
+  #touch-controls .right { left: 140px; bottom: 86px; }
+  #touch-controls .down { left: 78px; bottom: 24px; }
+
+  #touch-controls .brake { right: 16px; bottom: 24px; width: 76px; height: 76px; font-size: 0.8rem; }
+  #touch-controls .action { right: 34px; bottom: 116px; }
+
+  /* A flex row centered at a fixed bottom offset -- adapts to any screen
+     width, unlike hand-computed left/right offsets (which broke on a real
+     390px phone: the D-pad and this row ended up overlapping). */
+  #touch-controls .row {
+    position: fixed; bottom: 230px; left: 50%; transform: translateX(-50%);
+    z-index: 6; display: flex; gap: 12px;
+  }
+  #touch-controls .row .tbtn { position: static; }
+
+  /* Redundant with the on-screen buttons themselves, and it overlaps them
+     on narrow phones -- skip the text hints on touch devices. */
+  body.touch-enabled #hints { display: none; }
+</style>
+</head>
+<body>
+  <div id="hud">
+    <div id="hud-day">Day 1</div>
+    <div id="hud-biome"></div>
+    <div id="hud-status"></div>
+  </div>
+
+  <div id="compass">
+    <div id="compass-rose">
+      <span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span>
+    </div>
+    <div id="compass-pointer"></div>
+  </div>
+
+  <div id="hints">WASD/arrows drive &middot; Space brake/drift &middot; Tab switch vehicle &middot; E get in/out &middot; R make/pack camp &middot; C camera &middot; T time speed &middot; M map</div>
+
+  <div id="score-panel"></div>
+  <canvas id="minimap"></canvas>
+
+  <div id="touch-controls">
+    <button class="tbtn up" data-key="KeyW">&#9650;</button>
+    <button class="tbtn left" data-key="KeyA">&#9664;</button>
+    <button class="tbtn right" data-key="KeyD">&#9654;</button>
+    <button class="tbtn down" data-key="KeyS">&#9660;</button>
+
+    <button class="tbtn brake" data-key="Space">BRAKE</button>
+    <button class="tbtn action" data-key="KeyE">E</button>
+
+    <div class="row">
+      <button class="tbtn small" data-key="Tab">Tab</button>
+      <button class="tbtn small" data-key="KeyR">R</button>
+      <button class="tbtn small" data-key="KeyC">C</button>
+      <button class="tbtn small" data-key="KeyT">T</button>
+      <button class="tbtn small" data-key="KeyM">M</button>
+    </div>
+  </div>
+
+  <div id="name-entry">
+    <div class="card">
+      <h1>Wander</h1>
+      <p id="name-entry-subtitle">Who's exploring today?</p>
+      <form id="name-form">
+        <input id="name-input" type="text" maxlength="24" placeholder="Your name" autocomplete="off" />
+        <button type="submit">Begin</button>
+      </form>
+      <p id="boot-error" style="display:none; color:#a33; max-width:320px; margin-top:1rem;"></p>
+    </div>
+  </div>
+
+  <script>
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      document.body.classList.add('touch-enabled');
+    }
+
+    // ES modules can't load over file://, so this must run even if every
+    // module script below silently fails to fetch.
+    if (location.protocol === 'file:') {
+      document.getElementById('name-entry-subtitle').textContent =
+        "This needs to run from a local server, not a double-clicked file.";
+      document.getElementById('name-form').style.display = 'none';
+      const err = document.getElementById('boot-error');
+      err.style.display = 'block';
+      err.textContent = 'Run: python3 -m http.server 8080  (from the project folder), then open http://localhost:8080';
+    }
+  </script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
