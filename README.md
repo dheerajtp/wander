@@ -47,6 +47,32 @@ extension, etc. Just make sure you always reopen it at the **same**
 address; the browser's local storage (your name and save data) is tied to
 the exact host and port you use.
 
+## Deploying to GitHub Pages
+
+Since this is already a static site with no build step, GitHub Pages can
+serve it directly from the repo — no CI, no build config.
+
+1. Push this repo to GitHub (see the main project conversation, or GitHub's
+   own "push an existing repository" instructions, if you haven't already).
+2. On GitHub, open the repo's **Settings** tab → **Pages** (left sidebar).
+3. Under "Build and deployment", set **Source** to **Deploy from a
+   branch**, then set **Branch** to `main` and the folder to `/ (root)`.
+   Click **Save**.
+4. GitHub builds and publishes it within a minute or two, at:
+   `https://<your-username>.github.io/<repo-name>/`
+   (shown at the top of that same Pages settings screen once it's live).
+
+Any time you `git push` new changes to `main` afterward, the live site
+updates automatically — no extra steps.
+
+Two things specific to this project worth knowing:
+
+- The URL will use `https`, and a fresh visitor gets an empty save slot
+  until they type a name — that's expected, per-name saves live in that
+  browser's local storage, not on GitHub.
+- If you ever rename the repo, the Pages URL changes with it (the
+  `<repo-name>` segment above), so links you've shared would break.
+
 ## Controls
 
 | Action | Key |
